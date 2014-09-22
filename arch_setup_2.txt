@@ -1,0 +1,68 @@
+wget http://archlinuxarm.org/os/ArchLinuxARM-sun7i-latest.tar.gz
+wget http://mirror.archlinuxarm.org/armv7h/alarm/uboot-cubietruck-2014.04-9-armv7h.pkg.tar.xz
+
+Creare la SD
+dd if=/dev/zero of=/dev/sdb bs=1M count=10
+fdisk /dev/sdb (n p 1 enter enter w)
+mkfs.ext4 /dev/sdb1
+mount /dev/sdb1 /mnt
+bsdtar -xpf ArchLinuxARM-sun7i-latest.tar.gz -C /mnt
+
+# NON copiare il uEnv.txt   nel uboot-cubietruck-2014.04-9....tar.xz
+# MA  copiare lo script.bin nel uboot-cubietruck-2014.04-9....tar.xz
+tar -xf uboot-cubietruck-2014.04-9-armv7h.pkg.tar.xz 
+dd if=u-boot-sunxi-with-spl.bin of=/dev/sdb bs=1024 seek=8
+
+# modificare lo script.bin utilizzando bin2fex fex2bin
+#cercare screen0 per mettere la VGA in 1280x1024
+# mettere type=4    <-- VGA
+# mettere mode=3    <-- 1280x1024
+
+in boot/uEnv.txt
+	console=tty0
+	root=/dev/mmcblk0p1
+	extraargs=rootfstype=ext4 rootwait
+
+/////////////////////////////////////////////
+
+I driver sono in           /usr/lib/modules/3.4.90-4-ARCH/kernel
+I driver caricati sono in  /etc/modules-load.d/cubietruck.conf
+e per ora sono
+	disp
+	ump
+	mali
+	fbcon
+	lcd
+	hdmi
+	hci_uart
+	gpio_sunxi
+	sunxi_gmac
+	bcmdhd
+	sunxi_cedar_mod
+
+Una volta fatto il boot per attivare la rete
+	systemctl start dhcpcd
+	systemctl enable dhcpcd
+
+Per impostare la tastiera
+	echo 'KEYMAP=it' > /etc/vconsole.conf
+
+Per impostare la zona
+	timedatectl set-timezone Europe/Rome
+
+Per impostare l'ora con internet
+	pacman -S ntp
+	systemctl start ntpd.service
+	systemctl enable ntpd.service
+	
+
+Per mettere il nome
+	echo cubie > /etc/hostname
+
+Per fixare il MAC address
+	echo 'options sunxi_gmac mac_str="24:06:64:73:84:95"' > /etc/modprobe.d/gmac.conf
+
+
+Per evitare di sovrascrivere il boot facendo pacman -Suy
+	in /etc/pacman.conf
+	IgnorePkg = uboot*
